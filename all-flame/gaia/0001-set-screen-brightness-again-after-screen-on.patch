@@ -1,0 +1,24 @@
+From d39e1143415d04bbc26dffe0ff57df800ad16e9f Mon Sep 17 00:00:00 2001
+From: viralwang <vwang@mozilla.com>
+Date: Fri, 8 May 2015 18:03:56 +0800
+Subject: [PATCH] set screen brightness again after screen on
+
+---
+ apps/system/js/screen_manager.js |    1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/apps/system/js/screen_manager.js b/apps/system/js/screen_manager.js
+index ab51c20..238b800 100644
+--- a/apps/system/js/screen_manager.js
++++ b/apps/system/js/screen_manager.js
+@@ -422,6 +422,7 @@ var ScreenManager = {
+       power.screenEnabled = true;
+     }
+     this.screenEnabled = true;
++    this.setScreenBrightness(this._savedBrightness, instant);
+     this.screen.classList.remove('screenoff');
+ 
+     // Attaching the event listener effectively turn on the hardware
+-- 
+1.7.10.4
+

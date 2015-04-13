@@ -1,0 +1,131 @@
+From 965887a50c9c43e47baf388b16051b535af5b89c Mon Sep 17 00:00:00 2001
+From: viralwang <vwang@mozilla.com>
+Date: Mon, 11 May 2015 14:03:51 +0800
+Subject: [PATCH] revert this commit to make gecko build pass
+
+commit 2f9d6d57412e6b942a898f554264ce30c2849c85
+Author: Mingming Yin <mingming@codeaurora.org>
+Date:   Wed Jan 15 18:07:49 2014 -0800
+
+    libstagefright: Do not offload HEVC AV decoding
+
+    - Add compress offload exception for HEVC audio
+      decoding.
+---
+ include/media/stagefright/Utils.h                 |    2 +-
+ media/libmediaplayerservice/nuplayer/NuPlayer.cpp |    6 ++----
+ media/libstagefright/AwesomePlayer.cpp            |    8 ++------
+ media/libstagefright/Utils.cpp                    |   13 +------------
+ 4 files changed, 6 insertions(+), 23 deletions(-)
+
+diff --git a/include/media/stagefright/Utils.h b/include/media/stagefright/Utils.h
+index 4a59988..eafd3d1 100644
+--- a/include/media/stagefright/Utils.h
++++ b/include/media/stagefright/Utils.h
+@@ -60,7 +60,7 @@ void mapAACProfileToAudioFormat(audio_format_t& format, uint64_t eAacProfile);
+ status_t sendMetaDataToHal(sp<MediaPlayerBase::AudioSink>& sink, const sp<MetaData>& meta);
+ 
+ // Check whether the stream defined by meta can be offloaded to hardware
+-bool canOffloadStream(const sp<MetaData>& meta, bool hasVideo, const sp<MetaData>& vMeta,
++bool canOffloadStream(const sp<MetaData>& meta, bool hasVideo,
+                       bool isStreaming, audio_stream_type_t streamType);
+ void printFileName(int fd);
+ 
+diff --git a/media/libmediaplayerservice/nuplayer/NuPlayer.cpp b/media/libmediaplayerservice/nuplayer/NuPlayer.cpp
+index 7f30946..55813b1 100644
+--- a/media/libmediaplayerservice/nuplayer/NuPlayer.cpp
++++ b/media/libmediaplayerservice/nuplayer/NuPlayer.cpp
+@@ -645,15 +645,13 @@ void NuPlayer::onMessageReceived(const sp<AMessage> &msg) {
+             }
+ 
+             sp<AMessage> videoFormat = mSource->getFormat(false /* audio */);
+-            sp<MetaData> vMeta = new MetaData;
+-            convertMessageToMetaData(videoFormat, vMeta);
+ 
+             const char *mime = NULL;
+             if (audioMeta != NULL) {
+                 audioMeta->findCString(kKeyMIMEType, &mime);
+             }
+             mOffloadAudio =
+-                        canOffloadStream(audioMeta, (videoFormat != NULL), vMeta,
++                        canOffloadStream(audioMeta, (videoFormat != NULL),
+                                 mIsStreaming /* is_streaming */, streamType);
+             if (!mOffloadAudio && (audioMeta != NULL)) {
+                 sp<MetaData> audioSourceMeta = mSource->getFormatMeta(true/* audio */);
+@@ -662,7 +660,7 @@ void NuPlayer::onMessageReceived(const sp<AMessage> &msg) {
+ 
+                 mOffloadAudio =
+                         ((mime && !ExtendedUtils::pcmOffloadException(mime)) &&
+-                        canOffloadStream(audioPCMMeta, (videoFormat != NULL), vMeta,
++                        canOffloadStream(audioPCMMeta, (videoFormat != NULL),
+                                 mIsStreaming /* is_streaming */, streamType));
+                 mOffloadDecodedPCM = mOffloadAudio;
+                 ALOGI("Could not offload audio decode, pcm offload decided :%d",
+diff --git a/media/libstagefright/AwesomePlayer.cpp b/media/libstagefright/AwesomePlayer.cpp
+index 86a9463..e50b654 100644
+--- a/media/libstagefright/AwesomePlayer.cpp
++++ b/media/libstagefright/AwesomePlayer.cpp
+@@ -1688,11 +1688,7 @@ status_t AwesomePlayer::initAudioDecoder() {
+     ATRACE_CALL();
+ 
+     sp<MetaData> meta = mAudioTrack->getFormat();
+-    sp<MetaData> vMeta;
+     status_t err;
+-    if (mVideoTrack != NULL && mVideoSource != NULL) {
+-        vMeta = mVideoTrack->getFormat();
+-    }
+ 
+     const char *mime;
+     CHECK(meta->findCString(kKeyMIMEType, &mime));
+@@ -1705,7 +1701,7 @@ status_t AwesomePlayer::initAudioDecoder() {
+         streamType = mAudioSink->getAudioStreamType();
+     }
+ 
+-    mOffloadAudio = canOffloadStream(meta, (mVideoSource != NULL), vMeta,
++    mOffloadAudio = canOffloadStream(meta, (mVideoSource != NULL),
+                                      (isStreamingHTTP() || isWidevineContent()),
+                                      streamType);
+ 
+@@ -1744,7 +1740,7 @@ status_t AwesomePlayer::initAudioDecoder() {
+         if (durationUs >= 0) {
+             format->setInt64(kKeyDuration, durationUs);
+         }
+-        mOffloadAudio = canOffloadStream(format, (mVideoSource != NULL), vMeta,
++        mOffloadAudio = canOffloadStream(format, (mVideoSource != NULL),
+                                      (isStreamingHTTP() || isWidevineContent()), streamType);
+     }
+ 
+diff --git a/media/libstagefright/Utils.cpp b/media/libstagefright/Utils.cpp
+index bd824ce..bf699a4 100644
+--- a/media/libstagefright/Utils.cpp
++++ b/media/libstagefright/Utils.cpp
+@@ -767,7 +767,7 @@ const struct aac_format_conv_t* p = &profileLookup[0];
+     return;
+ }
+ 
+-bool canOffloadStream(const sp<MetaData>& meta, bool hasVideo, const sp<MetaData>& vMeta,
++bool canOffloadStream(const sp<MetaData>& meta, bool hasVideo,
+                       bool isStreaming, audio_stream_type_t streamType)
+ {
+     const char *mime;
+@@ -776,17 +776,6 @@ bool canOffloadStream(const sp<MetaData>& meta, bool hasVideo, const sp<MetaData
+     }
+     CHECK(meta->findCString(kKeyMIMEType, &mime));
+ 
+-    if (hasVideo) {
+-        const char *vMime;
+-        CHECK(vMeta->findCString(kKeyMIMEType, &vMime));
+-#ifdef ENABLE_AV_ENHANCEMENTS
+-        if (!strncmp(vMime, MEDIA_MIMETYPE_VIDEO_HEVC, strlen(MEDIA_MIMETYPE_VIDEO_HEVC))) {
+-            ALOGD("Do not offload HEVC audio+video playback");
+-            return false;
+-        }
+-#endif
+-    }
+-
+     audio_offload_info_t info = AUDIO_INFO_INITIALIZER;
+ 
+     info.format = AUDIO_FORMAT_INVALID;
+-- 
+1.7.10.4
+
