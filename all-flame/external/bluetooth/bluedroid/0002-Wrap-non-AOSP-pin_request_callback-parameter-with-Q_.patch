@@ -1,0 +1,63 @@
+From 1bd2b0420e78060c3f8fd236179bb9391de34f96 Mon Sep 17 00:00:00 2001
+From: Michael Vines <mvines@codeaurora.org>
+Date: Tue, 2 Dec 2014 11:39:53 -0800
+Subject: [PATCH] Wrap non-AOSP pin_request_callback parameter with
+ Q_BLUETOOTH
+
+Change-Id: I725d64155e2e990987049adf0822086981cc6afc
+---
+ btif/src/btif_dm.c            |   10 ++++++++++
+ test/blegatt_test/gatt_test.c |    4 ++++
+ 2 files changed, 14 insertions(+)
+
+diff --git a/btif/src/btif_dm.c b/btif/src/btif_dm.c
+index de81cfe..b5bc571 100644
+--- a/btif/src/btif_dm.c
++++ b/btif/src/btif_dm.c
+@@ -1085,8 +1085,13 @@ static void btif_dm_pin_req_evt(tBTA_DM_PIN_REQ *p_pin_req)
+             }
+         }
+     }
++#ifdef Q_BLUETOOTH
+     HAL_CBACK(bt_hal_cbacks, pin_request_cb,
+                      &bd_addr, &bd_name, cod, secure);
++#else
++    HAL_CBACK(bt_hal_cbacks, pin_request_cb,
++                     &bd_addr, &bd_name, cod);
++#endif
+ }
+ 
+ /*******************************************************************************
+@@ -3484,8 +3489,13 @@ static void btif_dm_ble_passkey_req_evt(tBTA_DM_PIN_REQ *p_pin_req)
+ 
+     cod = COD_UNCLASSIFIED;
+ 
++#ifdef Q_BLUETOOTH
+     HAL_CBACK(bt_hal_cbacks, pin_request_cb,
+               &bd_addr, &bd_name, cod, FALSE);
++#else
++    HAL_CBACK(bt_hal_cbacks, pin_request_cb,
++              &bd_addr, &bd_name, cod);
++#endif
+ }
+ 
+ 
+diff --git a/test/blegatt_test/gatt_test.c b/test/blegatt_test/gatt_test.c
+index 50a131c..ed4840f 100644
+--- a/test/blegatt_test/gatt_test.c
++++ b/test/blegatt_test/gatt_test.c
+@@ -882,7 +882,11 @@ static void discovery_state_changed(bt_discovery_state_t state)
+ }
+ 
+ 
++#ifdef Q_BLUETOOTH
+ static void pin_request_cb(bt_bdaddr_t *remote_bd_addr, bt_bdname_t *bd_name, uint32_t cod, uint8_t secure )
++#else
++static void pin_request_cb(bt_bdaddr_t *remote_bd_addr, bt_bdname_t *bd_name, uint32_t cod )
++#endif
+ {
+     int ret = 0;
+     remote_bd_address = remote_bd_addr;
+-- 
+1.7.10.4
+
