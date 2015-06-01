@@ -1,0 +1,46 @@
+From 5fd7bf8d840afb3f0e4f38b8b9879427af30922f Mon Sep 17 00:00:00 2001
+From: Michael Vines <mvines@codeaurora.org>
+Date: Tue, 2 Dec 2014 11:31:01 -0800
+Subject: [PATCH] Revert "Bluetooth: SAP: Header files changes to support SAP
+ on Bluedroid."
+
+This reverts commit 091164c3296dd86de31933500c95df59dac6c230.
+
+Change-Id: Ib042d1abbeed058522bc7170e20ef0f1eb28bb98
+---
+ include/hardware/bluetooth.h |    2 +-
+ include/hardware/bt_sock.h   |    5 ++---
+ 2 files changed, 3 insertions(+), 4 deletions(-)
+
+diff --git a/include/hardware/bluetooth.h b/include/hardware/bluetooth.h
+index 1280767..32e83fa 100644
+--- a/include/hardware/bluetooth.h
++++ b/include/hardware/bluetooth.h
+@@ -345,7 +345,7 @@ typedef void (*discovery_state_changed_callback)(bt_discovery_state_t state);
+ 
+ /** Bluetooth Legacy PinKey Request callback */
+ typedef void (*pin_request_callback)(bt_bdaddr_t *remote_bd_addr,
+-                                        bt_bdname_t *bd_name, uint32_t cod, uint8_t secure);
++                                        bt_bdname_t *bd_name, uint32_t cod);
+ 
+ /** Bluetooth SSP Request callback - Just Works & Numeric Comparison*/
+ /** pass_key - Shall be 0 for BT_SSP_PAIRING_VARIANT_CONSENT &
+diff --git a/include/hardware/bt_sock.h b/include/hardware/bt_sock.h
+index 6d98f33..ab36c37 100644
+--- a/include/hardware/bt_sock.h
++++ b/include/hardware/bt_sock.h
+@@ -19,9 +19,8 @@
+ 
+ __BEGIN_DECLS
+ 
+-#define BTSOCK_FLAG_ENCRYPT   (1)
+-#define BTSOCK_FLAG_AUTH      (1 << 1)
+-#define BTSOCK_FLAG_AUTH_HIGH (1 << 2)
++#define BTSOCK_FLAG_ENCRYPT 1
++#define BTSOCK_FLAG_AUTH (1 << 1)
+ 
+ typedef enum {
+     BTSOCK_RFCOMM = 1,
+-- 
+1.7.10.4
+
